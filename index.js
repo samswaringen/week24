@@ -77,7 +77,7 @@ input restaurantInput{
   id: Int
   name: String
   description: String
-  dishes: DishInput
+  dishes: [DishInput]
 }
 type DeleteResponse{
   ok: Boolean!
@@ -100,26 +100,40 @@ type Mutation{
 let index, filtered, dishIndex, filteredDish
 
 const mapFunction = (id)=>{
+  clearVar()
   restaurants.map((item,i)=> {
     if(id === item.id){
       filtered = item;
       index = i;
     }
   })
+  if(!filtered) {
+    throw new Error("Restaurant doesn't exist!")
+  }
 }
 
 const dishMapFunction = (Dish)=>{
+  clearVar()
   filtered.dishes.map((item,i)=>{
     if(item.name === Dish.name){
       filteredDish = item
       dishIndex = i;
     }
   })
+  if(!filteredDish) {
+    throw new Error("Dish doesn't exist!")
+  }
+}
+clearVar = ()=>{
+  index = null;
+  filtered = null;
+  dishIndex = null;
+  filteredDish = null;
 }
 var root = {
   restaurant : ({id})=>{
-    filtered = restaurants.filter((item)=> id === item.id)
-    return filtered[0]
+    mapFunction(id)
+    return filtered
   },
   restaurants : ()=> restaurants,
   createrestaurant : ({input}) => {
@@ -127,16 +141,13 @@ var root = {
     return input
   },
   deleterestaurant : ({id})=>{
-    filtered = restaurants.filter((item)=> id === item.id) 
-    const ok = Boolean(filtered[0])
+    mapFunction(id)
+    const ok = Boolean(filtered)
     restaurants = restaurants.filter(item => item.id !== id)
     return {ok}
   },
   editrestaurant: ({id, ...restaurant}) => {
     mapFunction(id)
-    if(!filtered) {
-      throw new Error("restaurant doesn't exist")
-    }
     restaurants[index] = {
     ...filtered,...restaurant
     }
@@ -144,9 +155,6 @@ var root = {
   },
   adddish: ({id, input}) => {
     mapFunction(id) 
-    if(!filtered) {
-      throw new Error("restaurant doesn't exist")
-    }
     restaurants[index].dishes.push({name:input.name, price:input.price})
     return input
   },
